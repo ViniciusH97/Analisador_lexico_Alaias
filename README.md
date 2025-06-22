@@ -158,7 +158,7 @@ wrt "string não fechada
 
 ```cmd
 # Navegar para o projeto
-cd "C:\Users\PC\Desktop\Analisador_lexico_Alaias"
+cd ".\Analisador_lexico_Alaias"
 
 # Executar interface gráfica
 python analisador.py
