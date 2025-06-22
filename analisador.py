@@ -47,8 +47,7 @@ class TokenType(Enum):
     WHITESPACE = "whitespace"
     NEWLINE = "newline"
     EOF = "eof"
-    
-    # Tipos de erro específicos
+      # Tipos de erro específicos
     ERRO_SIMBOLO_INVALIDO = "erro_simbolo_invalido"
     ERRO_IDENTIFICADOR_MALFORMADO = "erro_identificador_malformado"
     ERRO_IDENTIFICADOR_MUITO_LONGO = "erro_identificador_muito_longo"
@@ -56,6 +55,8 @@ class TokenType(Enum):
     ERRO_NUMERO_MUITO_LONGO = "erro_numero_muito_longo"
     ERRO_STRING_NAO_FECHADA = "erro_string_nao_fechada"
     ERRO_COMENTARIO_NAO_FECHADO = "erro_comentario_nao_fechado"
+    ERRO_PROGRAMA_SEM_INICIO = "erro_programa_sem_inicio"
+    ERRO_TIPO_INCOMPATIVEL = "erro_tipo_incompativel"
     ERRO = "erro"
 
 @dataclass
@@ -271,6 +272,114 @@ class AnalisadorLexico:
         
         return None
     
+    def _validar_inicio_programa(self, tokens: List[Token]) -> Optional[Token]:
+        """
+        Valida se o programa começa com a palavra reservada 'als'.
+        Ignora comentários, whitespace e quebras de linha.
+        """
+        for token in tokens:
+            # Ignora tokens que não são significativos para a estrutura
+            if token.tipo in [TokenType.COMENTARIO, TokenType.WHITESPACE, TokenType.NEWLINE, TokenType.EOF]:
+                continue
+            
+            # O primeiro token significativo deve ser 'als'
+            if token.tipo == TokenType.INICIO:
+                return None  # Programa válido
+            else:
+                # Programa não começa com 'als'
+                return Token(
+                    tipo=TokenType.ERRO_PROGRAMA_SEM_INICIO,
+                    lexema="",
+                    linha=token.linha,
+                    coluna=token.coluna,
+                    descricao="Programa deve começar com a palavra reservada 'als'",
+                    eh_erro=True
+                )
+        
+        # Se chegou aqui, não há tokens significativos
+        return Token(
+            tipo=TokenType.ERRO_PROGRAMA_SEM_INICIO,
+            lexema="",
+            linha=1,
+            coluna=1,
+            descricao="Programa deve começar com a palavra reservada 'als'",
+            eh_erro=True
+        )
+    
+    def _validar_tipos_variaveis(self, tokens: List[Token]) -> List[Token]:
+        """
+        Valida se os tipos de variáveis são compatíveis com os valores atribuídos.
+        """
+        erros_tipo = []
+        variaveis = {}  # {nome_variavel: tipo}
+        
+        i = 0
+        while i < len(tokens):
+            token_atual = tokens[i]
+            
+            # Identifica declaração de variável: tipo identificador
+            if (token_atual.tipo == TokenType.TIPO_VAR and 
+                i + 1 < len(tokens) and 
+                tokens[i + 1].tipo == TokenType.IDENTIFICADOR):
+                
+                tipo_var = token_atual.lexema
+                nome_var = tokens[i + 1].lexema
+                variaveis[nome_var] = tipo_var
+                i += 2
+                continue
+            
+            # Identifica atribuição: identificador <= valor
+            if (token_atual.tipo == TokenType.IDENTIFICADOR and
+                i + 2 < len(tokens) and
+                tokens[i + 1].tipo == TokenType.OPER_ATRIB):
+                
+                nome_var = token_atual.lexema
+                valor_token = tokens[i + 2]
+                
+                # Verifica se a variável foi declarada
+                if nome_var in variaveis:
+                    tipo_var = variaveis[nome_var]
+                    
+                    # Validação de tipos
+                    erro = None
+                    if tipo_var == "intn" and valor_token.tipo == TokenType.VALOR_REAL:
+                        erro = Token(
+                            tipo=TokenType.ERRO_TIPO_INCOMPATIVEL,
+                            lexema=f"{nome_var} <= {valor_token.lexema}",
+                            linha=token_atual.linha,
+                            coluna=token_atual.coluna,
+                            descricao=f"Variável '{nome_var}' do tipo 'intn' não pode receber valor decimal '{valor_token.lexema}'. Use tipo 'den' para valores decimais.",
+                            eh_erro=True
+                        )
+                    elif tipo_var == "bln" and valor_token.tipo not in [TokenType.VALOR_LOGICO]:
+                        erro = Token(
+                            tipo=TokenType.ERRO_TIPO_INCOMPATIVEL,
+                            lexema=f"{nome_var} <= {valor_token.lexema}",
+                            linha=token_atual.linha,
+                            coluna=token_atual.coluna,
+                            descricao=f"Variável '{nome_var}' do tipo 'bln' só pode receber valores lógicos (valid/invalid).",
+                            eh_erro=True
+                        )
+                    elif tipo_var == "txt" and valor_token.tipo != TokenType.VALOR_TEXTO:
+                        erro = Token(
+                            tipo=TokenType.ERRO_TIPO_INCOMPATIVEL,
+                            lexema=f"{nome_var} <= {valor_token.lexema}",
+                            linha=token_atual.linha,
+                            coluna=token_atual.coluna,
+                            descricao=f"Variável '{nome_var}' do tipo 'txt' só pode receber valores de texto entre aspas.",
+                            eh_erro=True
+                        )
+                    
+                    if erro:
+                        erros_tipo.append(erro)
+                
+                i += 3
+                continue
+            
+            i += 1
+        
+        return erros_tipo
+
     def analisar(self, codigo: str) -> List[Token]:
         """
         Analisa o código fonte e retorna uma lista de tokens.
@@ -379,8 +488,7 @@ class AnalisadorLexico:
                     
                     tokens.append(token)
                     coluna += 1
-        
-        # Adiciona token EOF
+          # Adiciona token EOF
         tokens.append(Token(
             tipo=TokenType.EOF,
             lexema="",
@@ -389,7 +497,16 @@ class AnalisadorLexico:
             descricao="Fim do arquivo"
         ))
         
-        return tokens    
+        # Valida se o programa começa com 'als'
+        erro_inicio = self._validar_inicio_programa(tokens)
+        if erro_inicio:
+            tokens.insert(0, erro_inicio)
+        
+        # Validação de tipos
+        erros_tipo = self._validar_tipos_variaveis(tokens)
+        tokens.extend(erros_tipo)
+        
+        return tokens
     def imprimir_tokens(self, tokens: List[Token]) -> str:
         """
         Retorna os tokens formatados como string.
@@ -690,13 +807,15 @@ wrt "Sua idade é: idade"
         erros = [token for token in self.tokens_atuais if token.eh_erro]
         
         if not erros:
-            self.texto_erros.insert('1.0', "🎉 Nenhum erro encontrado! O código está sintaticamente correto.")
+            self.texto_erros.insert('1.0', "Nenhum erro encontrado! O código está sintaticamente correto.")
         else:
             resultado = "ERROS ENCONTRADOS:\n\n"
             for i, erro in enumerate(erros, 1):
                 resultado += f"{i}. {str(erro)}\n\n"
             
             resultado += "\nTIPOS DE ERROS DETECTÁVEIS:\n"
+            resultado += "• Programa deve começar com a palavra reservada 'als'\n"
+            resultado += "• Incompatibilidade de tipos (ex: intn recebendo valor decimal)\n"
             resultado += "• Símbolos não pertencentes ao conjunto de símbolos terminais (@)\n"
             resultado += "• Identificadores mal formados (j@, 1a)\n"
             resultado += "• Identificadores muito longos (mais de 30 caracteres)\n"
@@ -776,7 +895,6 @@ wrt "Sua idade é: idade"
         print(f"Total de tokens: {stats['total_tokens']}")
         print(f"Erros: {stats['total_erros']}")
     else:
-        # Modo interface gráfica
         app = InterfaceGrafica()
         app.executar()
 
