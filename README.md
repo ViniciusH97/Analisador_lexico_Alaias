@@ -37,7 +37,7 @@ Deve retornar algo como "Python 3.x.x"
 
 #### 2. Navegar para o Diretório do Projeto
 ```cmd
-cd "C:\Users\PC\Desktop\Analisador_lexico_Alaias"
+cd ".\Analisador_lexico_Alaias"
 ```
 
 #### 3. Executar o Analisador (Interface Gráfica)
@@ -158,7 +158,7 @@ wrt "string não fechada
 
 ```cmd
 # Navegar para o projeto
-cd "C:\Users\PC\Desktop\Analisador_lexico_Alaias"
+cd ".\Analisador_lexico_Alaias"
 
 # Executar interface gráfica
 python analisador.py
