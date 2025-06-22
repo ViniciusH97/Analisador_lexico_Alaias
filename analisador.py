@@ -40,14 +40,14 @@ class TokenType(Enum):
     ABRE_COLCHETES = "abre_colchetes"
     FECHA_COLCHETES = "fecha_colchetes"
     VIRGULA = "virgula"
-    
-    # Outros
+      # Outros
     COMENTARIO = "comentario"
     IDENTIFICADOR = "identificador"
     WHITESPACE = "whitespace"
     NEWLINE = "newline"
     EOF = "eof"
-      # Tipos de erro específicos
+    
+    # Tipos de erro específicos
     ERRO_SIMBOLO_INVALIDO = "erro_simbolo_invalido"
     ERRO_IDENTIFICADOR_MALFORMADO = "erro_identificador_malformado"
     ERRO_IDENTIFICADOR_MUITO_LONGO = "erro_identificador_muito_longo"
@@ -57,6 +57,9 @@ class TokenType(Enum):
     ERRO_COMENTARIO_NAO_FECHADO = "erro_comentario_nao_fechado"
     ERRO_PROGRAMA_SEM_INICIO = "erro_programa_sem_inicio"
     ERRO_TIPO_INCOMPATIVEL = "erro_tipo_incompativel"
+    ERRO_OPERADOR_RELACIONAL_MALFORMADO = "erro_operador_relacional_malformado"
+    ERRO_PALAVRA_RESERVADA_MALFORMADA = "erro_palavra_reservada_malformada"
+    ERRO_OPERADOR_RELACIONAL_AUSENTE = "erro_operador_relacional_ausente"
     ERRO = "erro"
 
 @dataclass
@@ -272,6 +275,95 @@ class AnalisadorLexico:
         
         return None
     
+    def _verificar_operador_relacional_malformado(self, linha: str, posicao: int) -> Optional[Token]:
+        """
+        Verifica se há um operador relacional mal formado.
+        Detecta palavras que parecem ser operadores relacionais mas estão incorretas.
+        """
+        # Lista de operadores relacionais válidos
+        operadores_validos = {'gt', 'eq', 'ne', 'lt', 'ge', 'le'}
+        
+        # Lista de possíveis erros comuns de operadores relacionais
+        operadores_malformados = {
+            'e': 'eq',      # "e" em vez de "eq" (igual)
+            'g': 'gt',      # "g" em vez de "gt" (maior que)
+            'l': 'lt',      # "l" em vez de "lt" (menor que)
+            'n': 'ne',      # "n" em vez de "ne" (não igual)
+            'ge': 'ge',     # parcialmente correto
+            'le': 'le',     # parcialmente correto
+            'igual': 'eq',  # palavra em português
+            'maior': 'gt',  # palavra em português
+            'menor': 'lt',  # palavra em português
+        }
+        
+        # Extrai a próxima palavra
+        match = re.match(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', linha[posicao:])
+        if match:
+            lexema = match.group(0)
+            
+            # Verifica se está dentro de colchetes (contexto de condição)
+            inicio_colchete = linha.rfind('[', 0, posicao)
+            fim_colchete = linha.find(']', posicao)
+            
+            if inicio_colchete != -1 and fim_colchete != -1:
+                # Está dentro de uma condição, verifica se é um operador malformado
+                if lexema in operadores_malformados and lexema not in operadores_validos:
+                    sugestao = operadores_malformados[lexema]
+                    return Token(
+                        tipo=TokenType.ERRO_OPERADOR_RELACIONAL_MALFORMADO,
+                        lexema=lexema,
+                        linha=0,  # Será definido pelo chamador
+                        coluna=posicao + 1,
+                        descricao=f"Operador relacional mal formado: '{lexema}'. Sugestão: use '{sugestao}'",
+                        eh_erro=True
+                    )
+        
+        return None
+    
+    def _verificar_palavra_reservada_malformada(self, linha: str, posicao: int) -> Optional[Token]:
+        """
+        Verifica se há uma palavra reservada mal formada.
+        Detecta palavras que parecem ser palavras reservadas mas estão incompletas.
+        """
+        # Lista de palavras reservadas válidas
+        palavras_validas = {
+            'als', 'cdt', '!cdt', '!cdt+', 'cycle', 'during', 'repeat', 
+            'wrt', 'function', 'brkln', 'intn', 'den', 'txt', 'bln', 'crt'
+        }
+        
+        # Lista de possíveis erros comuns de palavras reservadas
+        palavras_malformadas = {
+            'wr': 'wrt',        # "wr" em vez de "wrt"
+            'wt': 'wrt',        # "wt" em vez de "wrt"
+            'write': 'wrt',     # palavra em inglês
+            'int': 'intn',      # "int" em vez de "intn"
+            'cd': 'cdt',        # "cd" em vez de "cdt"
+            'if': 'cdt',        # palavra em inglês
+            'else': '!cdt',     # palavra em inglês
+            'elseif': '!cdt+',  # palavra em inglês
+            'al': 'als',        # "al" em vez de "als"
+            'start': 'als',     # palavra em inglês
+        }
+        
+        # Extrai a próxima palavra
+        match = re.match(r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', linha[posicao:])
+        if match:
+            lexema = match.group(0)
+            
+            # Verifica se é uma palavra reservada malformada
+            if lexema in palavras_malformadas and lexema not in palavras_validas:
+                sugestao = palavras_malformadas[lexema]
+                return Token(
+                    tipo=TokenType.ERRO_PALAVRA_RESERVADA_MALFORMADA,
+                    lexema=lexema,
+                    linha=0,  # Será definido pelo chamador
+                    coluna=posicao + 1,
+                    descricao=f"Palavra reservada mal formada: '{lexema}'. Sugestão: use '{sugestao}'",
+                    eh_erro=True
+                )
+        
+        return None
+
     def _validar_inicio_programa(self, tokens: List[Token]) -> Optional[Token]:
         """
         Valida se o programa começa com a palavra reservada 'als'.
@@ -380,6 +472,57 @@ class AnalisadorLexico:
         
         return erros_tipo
 
+    def _validar_expressoes_condicionais(self, tokens: List[Token]) -> List[Token]:
+        """
+        Valida expressões dentro de colchetes para garantir que tenham operadores relacionais.
+        Detecta casos como [ idade 18 ] onde falta o operador relacional.
+        """
+        erros = []
+        i = 0
+        
+        while i < len(tokens):
+            token = tokens[i]
+            
+            # Procura por abertura de colchetes
+            if token.tipo == TokenType.ABRE_COLCHETES:
+                j = i + 1
+                elementos_significativos = []
+                
+                # Coleta tokens até o fechamento dos colchetes
+                while j < len(tokens) and tokens[j].tipo != TokenType.FECHA_COLCHETES:
+                    token_atual = tokens[j]
+                    # Ignora whitespace e newlines
+                    if token_atual.tipo not in [TokenType.WHITESPACE, TokenType.NEWLINE]:
+                        elementos_significativos.append(token_atual)
+                    j += 1
+                
+                # Verifica se há pelo menos 3 elementos: valor, operador, valor
+                if len(elementos_significativos) >= 2:
+                    # Verifica se há dois valores consecutivos sem operador relacional
+                    for k in range(len(elementos_significativos) - 1):
+                        token_atual = elementos_significativos[k]
+                        token_proximo = elementos_significativos[k + 1]
+                        
+                        # Verifica se são dois valores/identificadores consecutivos
+                        if (token_atual.tipo in [TokenType.IDENTIFICADOR, TokenType.VALOR_INTEIRO, TokenType.VALOR_REAL] and
+                            token_proximo.tipo in [TokenType.IDENTIFICADOR, TokenType.VALOR_INTEIRO, TokenType.VALOR_REAL]):
+                            
+                            erro = Token(
+                                tipo=TokenType.ERRO_OPERADOR_RELACIONAL_AUSENTE,
+                                lexema=f"{token_atual.lexema} {token_proximo.lexema}",
+                                linha=token_atual.linha,
+                                coluna=token_atual.coluna,
+                                descricao=f"Operador relacional ausente entre '{token_atual.lexema}' e '{token_proximo.lexema}'. Use: gt, eq, ne, lt, ge, le",
+                                eh_erro=True
+                            )
+                            erros.append(erro)
+                
+                i = j  # Pula para depois dos colchetes
+            else:
+                i += 1
+        
+        return erros
+
     def analisar(self, codigo: str) -> List[Token]:
         """
         Analisa o código fonte e retorna uma lista de tokens.
@@ -415,6 +558,20 @@ class AnalisadorLexico:
                     tokens.append(erro_identificador)
                     # Pula o identificador mal formado
                     coluna += len(erro_identificador.lexema)
+                    continue
+                
+                erro_operador_relacional = self._verificar_operador_relacional_malformado(linha, coluna)
+                if erro_operador_relacional:
+                    erro_operador_relacional.linha = num_linha
+                    tokens.append(erro_operador_relacional)
+                    coluna += len(erro_operador_relacional.lexema)
+                    continue
+                
+                erro_palavra_reservada = self._verificar_palavra_reservada_malformada(linha, coluna)
+                if erro_palavra_reservada:
+                    erro_palavra_reservada.linha = num_linha
+                    tokens.append(erro_palavra_reservada)
+                    coluna += len(erro_palavra_reservada.lexema)
                     continue
                 
                 # Tenta fazer match com cada padrão
@@ -505,6 +662,10 @@ class AnalisadorLexico:
         # Validação de tipos
         erros_tipo = self._validar_tipos_variaveis(tokens)
         tokens.extend(erros_tipo)
+        
+        # Validação de expressões condicionais
+        erros_condicionais = self._validar_expressoes_condicionais(tokens)
+        tokens.extend(erros_condicionais)
         
         return tokens
     def imprimir_tokens(self, tokens: List[Token]) -> str:
@@ -816,6 +977,9 @@ wrt "Sua idade é: idade"
             resultado += "\nTIPOS DE ERROS DETECTÁVEIS:\n"
             resultado += "• Programa deve começar com a palavra reservada 'als'\n"
             resultado += "• Incompatibilidade de tipos (ex: intn recebendo valor decimal)\n"
+            resultado += "• Operadores relacionais mal formados (ex: 'e' em vez de 'eq')\n"
+            resultado += "• Palavras reservadas mal formadas (ex: 'wr' em vez de 'wrt')\n"
+            resultado += "• Operadores relacionais ausentes em condições (ex: [ idade 18 ])\n"
             resultado += "• Símbolos não pertencentes ao conjunto de símbolos terminais (@)\n"
             resultado += "• Identificadores mal formados (j@, 1a)\n"
             resultado += "• Identificadores muito longos (mais de 30 caracteres)\n"
