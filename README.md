@@ -148,7 +148,7 @@ wrt "string não fechada
 
 ### Erro: "tkinter não encontrado"
 - No Windows: Reinstalar Python marcando "tcl/tk and IDLE"
-- No Linux: `sudo apt-get install python3-tk`
+- No Linux: `sudo apt install python3-tk`
 
 ### Interface não abre
 1. Verifique se está executando `python analisador.py` (sem --console)
