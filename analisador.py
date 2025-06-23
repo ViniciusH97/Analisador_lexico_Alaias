@@ -148,7 +148,6 @@ class AnalisadorLexico:
         ]
     
     def _verificar_string_nao_fechada(self, linha: str, posicao: int) -> Optional[Token]:
-        """Verifica se há uma string não fechada."""
         if linha[posicao] == '"':
             # Procura pelo fechamento da string
             pos_atual = posicao + 1
@@ -169,7 +168,6 @@ class AnalisadorLexico:
         return None
     
     def _verificar_numero_malformado(self, linha: str, posicao: int) -> Optional[Token]:
-        """Verifica se há um número mal formado."""
         if linha[posicao].isdigit():
             pos_atual = posicao
             tem_ponto = False
@@ -276,10 +274,6 @@ class AnalisadorLexico:
         return None
     
     def _verificar_operador_relacional_malformado(self, linha: str, posicao: int) -> Optional[Token]:
-        """
-        Verifica se há um operador relacional mal formado.
-        Detecta palavras que parecem ser operadores relacionais mas estão incorretas.
-        """
         # Lista de operadores relacionais válidos
         operadores_validos = {'gt', 'eq', 'ne', 'lt', 'ge', 'le'}
         
@@ -321,10 +315,6 @@ class AnalisadorLexico:
         return None
     
     def _verificar_palavra_reservada_malformada(self, linha: str, posicao: int) -> Optional[Token]:
-        """
-        Verifica se há uma palavra reservada mal formada.
-        Detecta palavras que parecem ser palavras reservadas mas estão incompletas.
-        """
         # Lista de palavras reservadas válidas
         palavras_validas = {
             'als', 'cdt', '!cdt', '!cdt+', 'cycle', 'during', 'repeat', 
@@ -365,10 +355,6 @@ class AnalisadorLexico:
         return None
 
     def _validar_inicio_programa(self, tokens: List[Token]) -> Optional[Token]:
-        """
-        Valida se o programa começa com a palavra reservada 'als'.
-        Ignora comentários, whitespace e quebras de linha.
-        """
         for token in tokens:
             # Ignora tokens que não são significativos para a estrutura
             if token.tipo in [TokenType.COMENTARIO, TokenType.WHITESPACE, TokenType.NEWLINE, TokenType.EOF]:
@@ -399,9 +385,6 @@ class AnalisadorLexico:
         )
     
     def _validar_tipos_variaveis(self, tokens: List[Token]) -> List[Token]:
-        """
-        Valida se os tipos de variáveis são compatíveis com os valores atribuídos.
-        """
         erros_tipo = []
         variaveis = {}  # {nome_variavel: tipo}
         
@@ -473,10 +456,6 @@ class AnalisadorLexico:
         return erros_tipo
 
     def _validar_expressoes_condicionais(self, tokens: List[Token]) -> List[Token]:
-        """
-        Valida expressões dentro de colchetes para garantir que tenham operadores relacionais.
-        Detecta casos como [ idade 18 ] onde falta o operador relacional.
-        """
         erros = []
         i = 0
         
@@ -524,9 +503,6 @@ class AnalisadorLexico:
         return erros
 
     def analisar(self, codigo: str) -> List[Token]:
-        """
-        Analisa o código fonte e retorna uma lista de tokens.
-        """
         tokens = []
         linhas = codigo.split('\n')
         
@@ -669,9 +645,6 @@ class AnalisadorLexico:
         
         return tokens
     def imprimir_tokens(self, tokens: List[Token]) -> str:
-        """
-        Retorna os tokens formatados como string.
-        """
         resultado = f"{'Token':<25} {'Lexema':<20} {'Linha':<6} {'Coluna':<7} {'Descrição'}\n"
         resultado += "-" * 100 + "\n"
         
@@ -683,9 +656,6 @@ class AnalisadorLexico:
         return resultado
     
     def obter_estatisticas(self, tokens: List[Token]) -> dict:
-        """
-        Retorna estatísticas sobre os tokens analisados.
-        """
         total_tokens = len([t for t in tokens if t.tipo != TokenType.EOF and t.tipo != TokenType.WHITESPACE])
         total_erros = len([t for t in tokens if t.eh_erro])
         
