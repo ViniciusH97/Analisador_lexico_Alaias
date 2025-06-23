@@ -743,7 +743,7 @@ class InterfaceGrafica:
         """
         # Frame principal
         main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        main_frame.grid(row=0, column=0, sticky="nsew")
         
         # Configurar grid
         self.root.columnconfigure(0, weight=1)
@@ -758,16 +758,16 @@ class InterfaceGrafica:
         
         # Frame da esquerda - Entrada de código
         frame_esquerda = ttk.LabelFrame(main_frame, text="Código Fonte", padding="10")
-        frame_esquerda.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
+        frame_esquerda.grid(row=1, column=0, sticky="nsew", padx=(0, 5))
         
         # Área de texto para código
         self.texto_codigo = scrolledtext.ScrolledText(frame_esquerda, width=50, height=25, 
                                                      font=('Consolas', 10))
-        self.texto_codigo.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.texto_codigo.grid(row=0, column=0, columnspan=3, sticky="nsew")
         
         # Botões de arquivo
         frame_botoes_arquivo = ttk.Frame(frame_esquerda)
-        frame_botoes_arquivo.grid(row=1, column=0, columnspan=3, pady=(10, 0), sticky=(tk.W, tk.E))
+        frame_botoes_arquivo.grid(row=1, column=0, columnspan=3, pady=(10, 0), sticky="ew")
         
         btn_abrir = ttk.Button(frame_botoes_arquivo, text="📂 Abrir Arquivo", 
                               command=self.abrir_arquivo)
@@ -784,15 +784,15 @@ class InterfaceGrafica:
         # Botão de análise
         btn_analisar = ttk.Button(frame_esquerda, text="🔍 ANALISAR CÓDIGO", 
                                  command=self.analisar_codigo, style='Accent.TButton')
-        btn_analisar.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky=(tk.W, tk.E))
+        btn_analisar.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky="ew")
         
         # Frame da direita - Resultados
         frame_direita = ttk.LabelFrame(main_frame, text="Resultados da Análise", padding="10")
-        frame_direita.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(5, 0))
+        frame_direita.grid(row=1, column=1, sticky="nsew", padx=(5, 0))
         
         # Notebook para abas
         self.notebook = ttk.Notebook(frame_direita)
-        self.notebook.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.notebook.grid(row=0, column=0, sticky="nsew")
         
         # Aba de tokens
         frame_tokens = ttk.Frame(self.notebook)
@@ -800,7 +800,7 @@ class InterfaceGrafica:
         
         self.texto_tokens = scrolledtext.ScrolledText(frame_tokens, width=60, height=20, 
                                                      font=('Consolas', 9))
-        self.texto_tokens.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.texto_tokens.grid(row=0, column=0, sticky="nsew")
         
         # Aba de erros
         frame_erros = ttk.Frame(self.notebook)
@@ -808,7 +808,7 @@ class InterfaceGrafica:
         
         self.texto_erros = scrolledtext.ScrolledText(frame_erros, width=60, height=20, 
                                                     font=('Consolas', 9))
-        self.texto_erros.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.texto_erros.grid(row=0, column=0, sticky="nsew")
         
         # Aba de estatísticas
         frame_stats = ttk.Frame(self.notebook)
@@ -816,15 +816,15 @@ class InterfaceGrafica:
         
         self.texto_stats = scrolledtext.ScrolledText(frame_stats, width=60, height=20, 
                                                     font=('Consolas', 9))
-        self.texto_stats.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.texto_stats.grid(row=0, column=0, sticky="nsew")
         
         # Frame inferior - Status
         frame_status = ttk.Frame(main_frame)
-        frame_status.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0))
+        frame_status.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
         
         self.label_status = tk.Label(frame_status, text="Pronto para análise", 
                                     bg='#f0f0f0', fg='#27ae60', font=('Arial', 10))
-        self.label_status.grid(row=0, column=0, sticky=tk.W)
+        self.label_status.grid(row=0, column=0, sticky="w")
         
         # Configurar grid weights
         frame_esquerda.columnconfigure(0, weight=1)
@@ -1053,6 +1053,7 @@ wrt "Sua idade é: idade"
         
         tokens = analisador.analisar(exemplo)
         print(analisador.imprimir_tokens(tokens))
+        
         
         stats = analisador.obter_estatisticas(tokens)
         print(f"\nESTATÍSTICAS:")
