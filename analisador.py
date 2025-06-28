@@ -325,14 +325,16 @@ class AnalisadorLexico:
         palavras_malformadas = {
             'wr': 'wrt',        # "wr" em vez de "wrt"
             'wt': 'wrt',        # "wt" em vez de "wrt"
+            'rt': 'wrt',        # "rt" em vez de "wrt"
             'write': 'wrt',     # palavra em inglês
             'int': 'intn',      # "int" em vez de "intn"
             'cd': 'cdt',        # "cd" em vez de "cdt"
+            'dt': 'cdt',        # "dt" em vez de "cdt"
             'if': 'cdt',        # palavra em inglês
             'else': '!cdt',     # palavra em inglês
             'elseif': '!cdt+',  # palavra em inglês
             'al': 'als',        # "al" em vez de "als"
-            'start': 'als',     # palavra em inglês
+            'ls': 'als',        # "ls" em vez de "als"
         }
         
         # Extrai a próxima palavra
@@ -708,25 +710,19 @@ class InterfaceGrafica:
         self.criar_interface()
         
     def criar_interface(self):
-        """
-        Cria toda a interface gráfica.
-        """
-        # Frame principal
+    
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.grid(row=0, column=0, sticky="nsew")
         
-        # Configurar grid
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
         main_frame.rowconfigure(1, weight=1)
         
-        # Título
         titulo = tk.Label(main_frame, text="ANALISADOR LÉXICO - LINGUAGEM ALAIAS", 
                          font=('Arial', 16, 'bold'), bg='#f0f0f0', fg='#2c3e50')
         titulo.grid(row=0, column=0, columnspan=2, pady=(0, 20))
         
-        # Frame da esquerda - Entrada de código
         frame_esquerda = ttk.LabelFrame(main_frame, text="Código Fonte", padding="10")
         frame_esquerda.grid(row=1, column=0, sticky="nsew", padx=(0, 5))
         
@@ -739,20 +735,20 @@ class InterfaceGrafica:
         frame_botoes_arquivo = ttk.Frame(frame_esquerda)
         frame_botoes_arquivo.grid(row=1, column=0, columnspan=3, pady=(10, 0), sticky="ew")
         
-        btn_abrir = ttk.Button(frame_botoes_arquivo, text="📂 Abrir Arquivo", 
+        btn_abrir = ttk.Button(frame_botoes_arquivo, text="Abrir Arquivo", 
                               command=self.abrir_arquivo)
         btn_abrir.grid(row=0, column=0, padx=(0, 5))
         
-        btn_salvar = ttk.Button(frame_botoes_arquivo, text="💾 Salvar Arquivo", 
+        btn_salvar = ttk.Button(frame_botoes_arquivo, text="Salvar Arquivo", 
                                command=self.salvar_arquivo)
         btn_salvar.grid(row=0, column=1, padx=(0, 5))
         
-        btn_limpar = ttk.Button(frame_botoes_arquivo, text="🗑️ Limpar", 
+        btn_limpar = ttk.Button(frame_botoes_arquivo, text="Limpar", 
                                command=self.limpar_codigo)
         btn_limpar.grid(row=0, column=2)
         
         # Botão de análise
-        btn_analisar = ttk.Button(frame_esquerda, text="🔍 ANALISAR CÓDIGO", 
+        btn_analisar = ttk.Button(frame_esquerda, text="ANALISAR CÓDIGO", 
                                  command=self.analisar_codigo, style='Accent.TButton')
         btn_analisar.grid(row=2, column=0, columnspan=3, pady=(10, 0), sticky="ew")
         
@@ -766,7 +762,7 @@ class InterfaceGrafica:
         
         # Aba de tokens
         frame_tokens = ttk.Frame(self.notebook)
-        self.notebook.add(frame_tokens, text="🔤 Tokens")
+        self.notebook.add(frame_tokens, text="Tokens")
         
         self.texto_tokens = scrolledtext.ScrolledText(frame_tokens, width=60, height=20, 
                                                      font=('Consolas', 9))
@@ -774,21 +770,19 @@ class InterfaceGrafica:
         
         # Aba de erros
         frame_erros = ttk.Frame(self.notebook)
-        self.notebook.add(frame_erros, text="❌ Erros")
+        self.notebook.add(frame_erros, text="Erros")
         
         self.texto_erros = scrolledtext.ScrolledText(frame_erros, width=60, height=20, 
                                                     font=('Consolas', 9))
         self.texto_erros.grid(row=0, column=0, sticky="nsew")
         
-        # Aba de estatísticas
         frame_stats = ttk.Frame(self.notebook)
-        self.notebook.add(frame_stats, text="📊 Estatísticas")
-        
+        self.notebook.add(frame_stats, text="Estatísticas")
+
         self.texto_stats = scrolledtext.ScrolledText(frame_stats, width=60, height=20, 
                                                     font=('Consolas', 9))
         self.texto_stats.grid(row=0, column=0, sticky="nsew")
         
-        # Frame inferior - Status
         frame_status = ttk.Frame(main_frame)
         frame_status.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 0))
         
@@ -796,7 +790,6 @@ class InterfaceGrafica:
                                     bg='#f0f0f0', fg='#27ae60', font=('Arial', 10))
         self.label_status.grid(row=0, column=0, sticky="w")
         
-        # Configurar grid weights
         frame_esquerda.columnconfigure(0, weight=1)
         frame_esquerda.rowconfigure(0, weight=1)
         frame_direita.columnconfigure(0, weight=1)
@@ -808,7 +801,6 @@ class InterfaceGrafica:
         frame_stats.columnconfigure(0, weight=1)
         frame_stats.rowconfigure(0, weight=1)
         
-        # Adicionar código de exemplo
         self.carregar_exemplo()
     
     def carregar_exemplo(self):
@@ -995,9 +987,7 @@ wrt "Sua idade é: idade"
 
 
 def main():
-    """
-    Função principal para executar o analisador léxico.
-    """
+
     if len(sys.argv) > 1 and sys.argv[1] == '--console':
         # Modo console
         analisador = AnalisadorLexico()
@@ -1015,7 +1005,7 @@ cdt [ idade ge 18 ]
 
 wrt "Sua idade é: idade"
 """
-        
+        analisador.analisar(exemplo)
         print("=== ANALISADOR LÉXICO - LINGUAGEM ALAIAS ===\n")
         print("CÓDIGO:")
         print(exemplo)

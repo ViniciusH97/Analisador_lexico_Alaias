@@ -8,12 +8,12 @@ txt nome
 bln adulto
 den salario
 
--- Entrada de dados (simulada)
+-- Declaração de variáveis
 nome <= "João Silva"
 idade <= 25
 salario <= 3500.75
 
--- Estrutura condicional
+-- Estrura condicional
 cdt [ idade ge 18 ]
     adulto <= valid
     wrt "Pessoa adulta"
