@@ -16,7 +16,7 @@ Este projeto implementa um analisador léxico completo para a linguagem de progr
 Analisador_lexico_Alaias/
 ├── analisador.py          # Código principal do analisador
 ├── README.md             # Documentação original
-├── INSTRUCOES_EXECUCAO.md # Este arquivo com instruções
+├── README.md # Este arquivo com instruções
 └── exemplos/             # (opcional) Arquivos de exemplo .als
 ```
 
