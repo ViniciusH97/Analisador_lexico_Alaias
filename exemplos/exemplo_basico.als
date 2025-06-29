@@ -1,7 +1,9 @@
 als
 
 intn idade -- Variável idade
-idade <= 20
+input (idade)
+-- ou idade <=
+
 
 cdt [ idade ge 18 ]
     wrt "Maior de idade"
