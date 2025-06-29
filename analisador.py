@@ -133,7 +133,6 @@ class AnalisadorLexico:
             (TokenType.VIRGULA, r',', "Vírgula"),
             
             # Identificadores (nomes de funções e variáveis)
-            (TokenType.NOME_FUNCAO, r'\bfuncao\s+([a-zA-Z][a-zA-Z0-9]*)', "Declaração de função"),
             (TokenType.IDENTIFICADOR, r'\b[a-zA-Z_][a-zA-Z0-9_]*\b', "Identificador"),
             
             # Whitespace e quebras de linha
@@ -325,16 +324,14 @@ class AnalisadorLexico:
         palavras_malformadas = {
             'wr': 'wrt',        # "wr" em vez de "wrt"
             'wt': 'wrt',        # "wt" em vez de "wrt"
-            'rt': 'wrt',        # "rt" em vez de "wrt"
             'write': 'wrt',     # palavra em inglês
             'int': 'intn',      # "int" em vez de "intn"
             'cd': 'cdt',        # "cd" em vez de "cdt"
-            'dt': 'cdt',        # "dt" em vez de "cdt"
             'if': 'cdt',        # palavra em inglês
             'else': '!cdt',     # palavra em inglês
             'elseif': '!cdt+',  # palavra em inglês
             'al': 'als',        # "al" em vez de "als"
-            'ls': 'als',        # "ls" em vez de "als"
+            'start': 'als',     # palavra em inglês
         }
         
         # Extrai a próxima palavra
@@ -601,7 +598,7 @@ class AnalisadorLexico:
                 if not token_encontrado:
                     # Verifica se é um símbolo inválido específico
                     char = linha[coluna]
-                    if char == '@':
+                    if char in '@$%#&!':
                         token = Token(
                             tipo=TokenType.ERRO_SIMBOLO_INVALIDO,
                             lexema=char,
@@ -1005,7 +1002,6 @@ cdt [ idade ge 18 ]
 
 wrt "Sua idade é: idade"
 """
-        analisador.analisar(exemplo)
         print("=== ANALISADOR LÉXICO - LINGUAGEM ALAIAS ===\n")
         print("CÓDIGO:")
         print(exemplo)
