@@ -18,6 +18,7 @@ class TokenType(Enum):
     REP_ENQUANTO = "during"
     REP_RANGE = "repeat"
     WRT = "wrt"
+    INPUT = "input"
     FUNCTION = "function"
     NOME_FUNCAO = "funcao"
     PULAR_LINHA = "brkln"
@@ -60,6 +61,9 @@ class TokenType(Enum):
     ERRO_OPERADOR_RELACIONAL_MALFORMADO = "erro_operador_relacional_malformado"
     ERRO_PALAVRA_RESERVADA_MALFORMADA = "erro_palavra_reservada_malformada"
     ERRO_OPERADOR_RELACIONAL_AUSENTE = "erro_operador_relacional_ausente"
+    ERRO_INPUT_SEM_VARIAVEL = "erro_input_sem_variavel"
+    ERRO_INPUT_VARIAVEL_NAO_DECLARADA = "erro_input_variavel_nao_declarada"
+    ERRO_INPUT_SINTAXE_INCORRETA = "erro_input_sintaxe_incorreta"
     ERRO = "erro"
 
 @dataclass
@@ -97,6 +101,7 @@ class AnalisadorLexico:
             (TokenType.REP_ENQUANTO, r'\bduring\b', "Palavra reservada para estrutura de repetição enquanto"),
             (TokenType.REP_RANGE, r'\brepeat\b', "Palavra reservada para repetição com contador fixo"),
             (TokenType.WRT, r'\bwrt\b', "Palavra reservada para saída"),
+            (TokenType.INPUT, r'\binput\b', "Palavra reservada para entrada de dados"),
             (TokenType.FUNCTION, r'\bfunction\b', "Palavra reservada para criação de funções"),
             (TokenType.PULAR_LINHA, r'\bbrkln\b', "Palavra reservada para quebra de linha"),
             
@@ -317,7 +322,7 @@ class AnalisadorLexico:
         # Lista de palavras reservadas válidas
         palavras_validas = {
             'als', 'cdt', '!cdt', '!cdt+', 'cycle', 'during', 'repeat', 
-            'wrt', 'function', 'brkln', 'intn', 'den', 'txt', 'bln', 'crt'
+            'wrt', 'input', 'function', 'brkln', 'intn', 'den', 'txt', 'bln', 'crt'
         }
         
         # Lista de possíveis erros comuns de palavras reservadas
@@ -325,6 +330,10 @@ class AnalisadorLexico:
             'wr': 'wrt',        # "wr" em vez de "wrt"
             'wt': 'wrt',        # "wt" em vez de "wrt"
             'write': 'wrt',     # palavra em inglês
+            'inp': 'input',     # "inp" em vez de "input"
+            'in': 'input',      # "in" em vez de "input"
+            'read': 'input',    # palavra em inglês
+            'scanf': 'input',   # referência C
             'int': 'intn',      # "int" em vez de "intn"
             'cd': 'cdt',        # "cd" em vez de "cdt"
             'if': 'cdt',        # palavra em inglês
@@ -501,6 +510,116 @@ class AnalisadorLexico:
         
         return erros
 
+    def _validar_comando_input(self, tokens: List[Token]) -> List[Token]:
+        """Valida a sintaxe do comando input."""
+        erros = []
+        variaveis_declaradas = set()
+        
+        # Primeiro, coleta todas as variáveis declaradas
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if (token.tipo == TokenType.TIPO_VAR and 
+                i + 1 < len(tokens) and 
+                tokens[i + 1].tipo == TokenType.IDENTIFICADOR):
+                variaveis_declaradas.add(tokens[i + 1].lexema)
+                i += 2
+            else:
+                i += 1
+        
+        # Agora valida os comandos input
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            
+            if token.tipo == TokenType.INPUT:
+                # Verifica se há parênteses após input
+                j = i + 1
+                # Pula whitespace
+                while j < len(tokens) and tokens[j].tipo == TokenType.WHITESPACE:
+                    j += 1
+                
+                if j >= len(tokens) or tokens[j].tipo != TokenType.ABRE_PARENT:
+                    erro = Token(
+                        tipo=TokenType.ERRO_INPUT_SINTAXE_INCORRETA,
+                        lexema="input",
+                        linha=token.linha,
+                        coluna=token.coluna,
+                        descricao="Comando 'input' deve ser seguido por parênteses: input(variavel)",
+                        eh_erro=True
+                    )
+                    erros.append(erro)
+                    i += 1
+                    continue
+                
+                j += 1  # Pula o (
+                # Pula whitespace
+                while j < len(tokens) and tokens[j].tipo == TokenType.WHITESPACE:
+                    j += 1
+                
+                if j >= len(tokens):
+                    erro = Token(
+                        tipo=TokenType.ERRO_INPUT_SEM_VARIAVEL,
+                        lexema="input(",
+                        linha=token.linha,
+                        coluna=token.coluna,
+                        descricao="Comando 'input' sem variável especificada",
+                        eh_erro=True
+                    )
+                    erros.append(erro)
+                    i = j
+                    continue
+                
+                # Deve ter um identificador
+                if tokens[j].tipo != TokenType.IDENTIFICADOR:
+                    erro = Token(
+                        tipo=TokenType.ERRO_INPUT_SEM_VARIAVEL,
+                        lexema=f"input({tokens[j].lexema}",
+                        linha=token.linha,
+                        coluna=token.coluna,
+                        descricao="Comando 'input' deve conter uma variável válida entre parênteses",
+                        eh_erro=True
+                    )
+                    erros.append(erro)
+                    i = j + 1
+                    continue
+                
+                # Verifica se a variável foi declarada
+                nome_variavel = tokens[j].lexema
+                if nome_variavel not in variaveis_declaradas:
+                    erro = Token(
+                        tipo=TokenType.ERRO_INPUT_VARIAVEL_NAO_DECLARADA,
+                        lexema=f"input({nome_variavel})",
+                        linha=token.linha,
+                        coluna=token.coluna,
+                        descricao=f"Variável '{nome_variavel}' não foi declarada antes do comando input",
+                        eh_erro=True
+                    )
+                    erros.append(erro)
+                
+                j += 1  # Pula o identificador
+                # Pula whitespace
+                while j < len(tokens) and tokens[j].tipo == TokenType.WHITESPACE:
+                    j += 1
+                
+                # Deve ter parêntese de fechamento
+                if j >= len(tokens) or tokens[j].tipo != TokenType.FECHA_PARENT:
+                    erro = Token(
+                        tipo=TokenType.ERRO_INPUT_SINTAXE_INCORRETA,
+                        lexema=f"input({nome_variavel}",
+                        linha=token.linha,
+                        coluna=token.coluna,
+                        descricao="Comando 'input' deve ser fechado com parênteses: input(variavel)",
+                        eh_erro=True
+                    )
+                    erros.append(erro)
+                
+                i = j + 1 if j < len(tokens) else len(tokens)
+            else:
+                i += 1
+        
+        return erros
+
     def analisar(self, codigo: str) -> List[Token]:
         tokens = []
         linhas = codigo.split('\n')
@@ -641,6 +760,10 @@ class AnalisadorLexico:
         # Validação de expressões condicionais
         erros_condicionais = self._validar_expressoes_condicionais(tokens)
         tokens.extend(erros_condicionais)
+        
+        # Validação de comandos input
+        erros_input = self._validar_comando_input(tokens)
+        tokens.extend(erros_input)
         
         return tokens
     def imprimir_tokens(self, tokens: List[Token]) -> str:
@@ -807,7 +930,7 @@ class InterfaceGrafica:
         exemplo = """als
 
 intn idade -- Variável idade
-idade <= 20
+input(idade) -- Solicita entrada do usuário
 
 cdt [ idade ge 18 ]
     wrt "Maior de idade"
@@ -821,6 +944,8 @@ wrt "Sua idade é: idade"
 -- txt nome @ -- Símbolo inválido
 -- intn numero <= 2.a3 -- Número mal formado
 -- wrt "string não fechada
+-- input(varNaoDeclarada) -- Variável não declarada
+-- input idade -- Sintaxe incorreta (sem parênteses)
 """
         self.texto_codigo.delete('1.0', tk.END)
         self.texto_codigo.insert('1.0', exemplo)
@@ -939,6 +1064,9 @@ wrt "Sua idade é: idade"
             resultado += "• Operadores relacionais mal formados (ex: 'e' em vez de 'eq')\n"
             resultado += "• Palavras reservadas mal formadas (ex: 'wr' em vez de 'wrt')\n"
             resultado += "• Operadores relacionais ausentes em condições (ex: [ idade 18 ])\n"
+            resultado += "• Comando 'input' com sintaxe incorreta (ex: input sem parênteses)\n"
+            resultado += "• Comando 'input' sem variável especificada\n"
+            resultado += "• Comando 'input' com variável não declarada\n"
             resultado += "• Símbolos não pertencentes ao conjunto de símbolos terminais (@)\n"
             resultado += "• Identificadores mal formados (j@, 1a)\n"
             resultado += "• Identificadores muito longos (mais de 30 caracteres)\n"
@@ -993,7 +1121,7 @@ def main():
         exemplo = """als
 
 intn idade -- Variável idade
-idade <= 20
+input(idade) -- Solicita entrada do usuário
 
 cdt [ idade ge 18 ]
     wrt "Maior de idade"
