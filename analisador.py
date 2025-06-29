@@ -102,7 +102,7 @@ class AnalisadorLexico:
             (TokenType.REP_RANGE, r'\brepeat\b', "Palavra reservada para repetição com contador fixo"),
             (TokenType.WRT, r'\bwrt\b', "Palavra reservada para saída"),
             (TokenType.INPUT, r'\binput\b', "Palavra reservada para entrada de dados"),
-            (TokenType.FUNCTION, r'\bfunction\b', "Palavra reservada para criação de funções"),
+            (TokenType.FUNCTION, r'\bfunc\b', "Palavra reservada para criação de funções"),
             (TokenType.PULAR_LINHA, r'\bbrkln\b', "Palavra reservada para quebra de linha"),
             
             # Tipos de variáveis
@@ -322,7 +322,7 @@ class AnalisadorLexico:
         # Lista de palavras reservadas válidas
         palavras_validas = {
             'als', 'cdt', '!cdt', '!cdt+', 'cycle', 'during', 'repeat', 
-            'wrt', 'input', 'function', 'brkln', 'intn', 'den', 'txt', 'bln', 'crt'
+            'wrt', 'input', 'func', 'brkln', 'intn', 'den', 'txt', 'bln', 'crt'
         }
         
         # Lista de possíveis erros comuns de palavras reservadas
@@ -341,6 +341,8 @@ class AnalisadorLexico:
             'elseif': '!cdt+',  # palavra em inglês
             'al': 'als',        # "al" em vez de "als"
             'start': 'als',     # palavra em inglês
+            'function': 'func', # "function" em vez de "func"
+            'fn': 'func',       # "fn" em vez de "func"
         }
         
         # Extrai a próxima palavra
@@ -483,32 +485,76 @@ class AnalisadorLexico:
                         elementos_significativos.append(token_atual)
                     j += 1
                 
-                # Verifica se há pelo menos 3 elementos: valor, operador, valor
+                # Valida a estrutura da expressão condicional
                 if len(elementos_significativos) >= 2:
                     # Verifica se há dois valores consecutivos sem operador relacional
+                    # mas ignora se há operadores lógicos entre eles
                     for k in range(len(elementos_significativos) - 1):
                         token_atual = elementos_significativos[k]
                         token_proximo = elementos_significativos[k + 1]
                         
                         # Verifica se são dois valores/identificadores consecutivos
+                        # sem operador relacional ou lógico entre eles
                         if (token_atual.tipo in [TokenType.IDENTIFICADOR, TokenType.VALOR_INTEIRO, TokenType.VALOR_REAL] and
                             token_proximo.tipo in [TokenType.IDENTIFICADOR, TokenType.VALOR_INTEIRO, TokenType.VALOR_REAL]):
                             
-                            erro = Token(
-                                tipo=TokenType.ERRO_OPERADOR_RELACIONAL_AUSENTE,
-                                lexema=f"{token_atual.lexema} {token_proximo.lexema}",
-                                linha=token_atual.linha,
-                                coluna=token_atual.coluna,
-                                descricao=f"Operador relacional ausente entre '{token_atual.lexema}' e '{token_proximo.lexema}'. Use: gt, eq, ne, lt, ge, le",
-                                eh_erro=True
-                            )
-                            erros.append(erro)
+                            # Verifica se não há operador lógico anterior que justifique
+                            tem_operador_logico = False
+                            if k > 0 and elementos_significativos[k - 1].tipo == TokenType.OPER_LOGICO:
+                                tem_operador_logico = True
+                            
+                            if not tem_operador_logico:
+                                erro = Token(
+                                    tipo=TokenType.ERRO_OPERADOR_RELACIONAL_AUSENTE,
+                                    lexema=f"{token_atual.lexema} {token_proximo.lexema}",
+                                    linha=token_atual.linha,
+                                    coluna=token_atual.coluna,
+                                    descricao=f"Operador relacional ausente entre '{token_atual.lexema}' e '{token_proximo.lexema}'. Use: gt, eq, ne, lt, ge, le",
+                                    eh_erro=True
+                                )
+                                erros.append(erro)
+                
+                # Valida a estrutura de expressões com operadores lógicos
+                self._validar_expressao_logica(elementos_significativos, erros)
                 
                 i = j  # Pula para depois dos colchetes
             else:
                 i += 1
         
         return erros
+    
+    def _validar_expressao_logica(self, elementos: List[Token], erros: List[Token]) -> None:
+        """Valida a estrutura de expressões lógicas compostas."""
+        i = 0
+        while i < len(elementos):
+            token = elementos[i]
+            
+            # Se encontrou um operador lógico (AND/OR)
+            if token.tipo == TokenType.OPER_LOGICO:
+                # Verifica se há elementos suficientes antes e depois
+                if i < 3:  # Precisa de pelo menos: valor op_rel valor AND
+                    erro = Token(
+                        tipo=TokenType.ERRO_OPERADOR_RELACIONAL_AUSENTE,
+                        lexema=token.lexema,
+                        linha=token.linha,
+                        coluna=token.coluna,
+                        descricao=f"Operador lógico '{token.lexema}' sem expressão relacional completa anterior",
+                        eh_erro=True
+                    )
+                    erros.append(erro)
+                
+                if i + 3 >= len(elementos):  # Precisa de pelo menos: AND valor op_rel valor
+                    erro = Token(
+                        tipo=TokenType.ERRO_OPERADOR_RELACIONAL_AUSENTE,
+                        lexema=token.lexema,
+                        linha=token.linha,
+                        coluna=token.coluna,
+                        descricao=f"Operador lógico '{token.lexema}' sem expressão relacional completa posterior",
+                        eh_erro=True
+                    )
+                    erros.append(erro)
+            
+            i += 1
 
     def _validar_comando_input(self, tokens: List[Token]) -> List[Token]:
         """Valida a sintaxe do comando input."""
@@ -929,15 +975,23 @@ class InterfaceGrafica:
         """
         exemplo = """als
 
-intn idade -- Variável idade
-input(idade) -- Solicita entrada do usuário
+-- Declaração de variáveis
+intn idade
+intn peso
+txt nome
 
-cdt [ idade ge 18 ]
-    wrt "Maior de idade"
+input(idade)
+input(peso)
+input(nome)
+
+cdt [ idade ge 18 and idade lt 80 ]
+    wrt "Idade válida para consulta"
+
+!cdt+ [ idade ge 80 or idade lt 18 ]
+    wrt "Idade fora do intervalo recomendado"
+
 !cdt
-    wrt "Menor de idade"
-
-wrt "Sua idade é: idade"
+    wrt "Idade inválida"
 
 -- Exemplos de erros para teste:
 -- intn 1abc -- Identificador mal formado
@@ -946,6 +1000,7 @@ wrt "Sua idade é: idade"
 -- wrt "string não fechada
 -- input(varNaoDeclarada) -- Variável não declarada
 -- input idade -- Sintaxe incorreta (sem parênteses)
+-- cdt [ idade 18 ] -- Operador relacional ausente
 """
         self.texto_codigo.delete('1.0', tk.END)
         self.texto_codigo.insert('1.0', exemplo)
@@ -1064,6 +1119,7 @@ wrt "Sua idade é: idade"
             resultado += "• Operadores relacionais mal formados (ex: 'e' em vez de 'eq')\n"
             resultado += "• Palavras reservadas mal formadas (ex: 'wr' em vez de 'wrt')\n"
             resultado += "• Operadores relacionais ausentes em condições (ex: [ idade 18 ])\n"
+            resultado += "• Expressões lógicas mal formadas (ex: 'and' sem expressões completas)\n"
             resultado += "• Comando 'input' com sintaxe incorreta (ex: input sem parênteses)\n"
             resultado += "• Comando 'input' sem variável especificada\n"
             resultado += "• Comando 'input' com variável não declarada\n"
@@ -1074,6 +1130,9 @@ wrt "Sua idade é: idade"
             resultado += "• Números muito longos (mais de 15 dígitos)\n"
             resultado += "• Strings não fechadas (\"hello world)\n"
             resultado += "• Caracteres não reconhecidos\n"
+            resultado += "\nOPERADORES LÓGICOS SUPORTADOS:\n"
+            resultado += "• 'and' - E lógico (ex: [ idade ge 18 and idade lt 80 ])\n"
+            resultado += "• 'or' - OU lógico (ex: [ idade lt 18 or idade ge 65 ])\n"
             
             self.texto_erros.insert('1.0', resultado)
     
@@ -1120,15 +1179,32 @@ def main():
         # Exemplo do enunciado
         exemplo = """als
 
-intn idade -- Variável idade
-input(idade) -- Solicita entrada do usuário
+-- Declaração de variáveis
+intn idade
+intn peso
+den altura
 
-cdt [ idade ge 18 ]
-    wrt "Maior de idade"
+-- Função para calcular situação
+func verificarSituacao()
+    cdt [ idade ge 18 and peso gt 50 ]
+        wrt "Apto para atividade"
+    !cdt+ [ idade lt 18 or peso le 50 ]
+        wrt "Verificar com responsável"
+    !cdt
+        wrt "Situação indefinida"
+
+-- Programa principal
+input(idade)
+input(peso)
+input(altura)
+
+cdt [ idade ge 18 and idade lt 80 ]
+    wrt "Idade válida"
+    verificarSituacao()
 !cdt
-    wrt "Menor de idade"
+    wrt "Idade fora do intervalo"
 
-wrt "Sua idade é: idade"
+wrt "Análise concluída"
 """
         print("=== ANALISADOR LÉXICO - LINGUAGEM ALAIAS ===\n")
         print("CÓDIGO:")
