@@ -1043,9 +1043,7 @@ cdt [ idade ge 18 and idade lt 80 ]
                 messagebox.showerror("Erro", f"Erro ao salvar arquivo: {str(e)}")
     
     def limpar_codigo(self):
-        """
-        Limpa o código e os resultados.
-        """
+        # Limpa o código fonte e os resultados
         self.texto_codigo.delete('1.0', tk.END)
         self.texto_tokens.delete('1.0', tk.END)
         self.texto_erros.delete('1.0', tk.END)
@@ -1053,9 +1051,9 @@ cdt [ idade ge 18 and idade lt 80 ]
         self.label_status.config(text="Código limpo", fg='#27ae60')
     
     def analisar_codigo(self):
-        """
-        Analisa o código atual.
-        """
+
+        # analisa o código fonte atual na interface gráfica
+
         codigo = self.texto_codigo.get('1.0', tk.END).strip()
         
         if not codigo:
@@ -1086,9 +1084,6 @@ cdt [ idade ge 18 and idade lt 80 ]
             self.label_status.config(text="Erro na análise", fg='#e74c3c')
     
     def atualizar_tokens(self):
-        """
-        Atualiza a aba de tokens.
-        """
         self.texto_tokens.delete('1.0', tk.END)
         
         resultado = ""
@@ -1099,9 +1094,7 @@ cdt [ idade ge 18 and idade lt 80 ]
         self.texto_tokens.insert('1.0', resultado)
     
     def atualizar_erros(self):
-        """
-        Atualiza a aba de erros.
-        """
+
         self.texto_erros.delete('1.0', tk.END)
         
         erros = [token for token in self.tokens_atuais if token.eh_erro]
@@ -1137,9 +1130,7 @@ cdt [ idade ge 18 and idade lt 80 ]
             self.texto_erros.insert('1.0', resultado)
     
     def atualizar_estatisticas(self):
-        """
-        Atualiza a aba de estatísticas.
-        """
+
         self.texto_stats.delete('1.0', tk.END)
         
         stats = self.analisador.obter_estatisticas(self.tokens_atuais)
@@ -1164,9 +1155,6 @@ cdt [ idade ge 18 and idade lt 80 ]
         self.texto_stats.insert('1.0', resultado)
     
     def executar(self):
-        """
-        Inicia a interface gráfica.
-        """
         self.root.mainloop()
 
 
